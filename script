@@ -33,7 +33,7 @@ def links_menu():
 # Обработчик команд и текста:
 
 # Команда /start, /hello и /hi
-@bot.message_handler(commands=['start', 'hello', 'hi'])
+@bot.message_handler(commands=['start', 'hello', 'hi', 'Hi', 'HI'])
 def send_welcome(message):
     bot_name = bot.get_me().first_name
     bot.reply_to(message, f'Привет! Я бот {bot_name}! Нажми на кнопки внизу, чтобы пообщаться.', reply_markup=main_menu())
