@@ -1,0 +1,112 @@
+import telebot
+from telebot import types
+
+# Инициализация бота с токеном
+bot = telebot.TeleBot("8864459252:AAHe9xbiUBWBBZ5FJnoDIyr5SEGZNIkOcO0")
+
+# Переменные для хранения ответов пользователя в опросе
+user_name = ""
+user_age = ""
+
+
+# Создание кнопок:
+
+# Главное меню (кнопки на клавиатуре вместо ввода текста)
+def main_menu():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    button1 = types.KeyboardButton("👋 Привет")
+    button2 = types.KeyboardButton("📝 Опрос")
+    button3 = types.KeyboardButton("❓ Инфо")
+    button4 = types.KeyboardButton("👋 Пока")
+    markup.add(button1, button2, button3, button4)
+    return markup
+
+# Кнопки со ссылками под сообщением (Inline-кнопки)
+def links_menu():
+    markup = types.InlineKeyboardMarkup()
+    btn_docs = types.InlineKeyboardButton(text="Документация", url="https://pytba.readthedocs.io/ru/latest/index.html")
+    btn_examples = types.InlineKeyboardButton(text="Примеры кода", url="https://github.com/eternnoir/pyTelegramBotAPI/tree/master/examples")
+    markup.add(btn_docs, btn_examples)
+    return markup
+
+
+# Обработчик команд и текста:
+
+# Команда /start, /hello и /hi
+@bot.message_handler(commands=['start', 'hello', 'hi'])
+def send_welcome(message):
+    bot_name = bot.get_me().first_name
+    bot.reply_to(message, f'Привет! Я бот {bot_name}! Нажми на кнопки внизу, чтобы пообщаться.', reply_markup=main_menu())
+
+# Команда /bye
+@bot.message_handler(commands=['bye'])
+def send_bye(message):
+    bot.reply_to(message, 'Пока! До новых встреч!', reply_markup=types.ReplyKeyboardRemove())
+
+# Команда /heh с проверкой ошибок через try-except
+@bot.message_handler(commands=['heh'])
+def send_heh(message):
+    try:
+        text_parts = message.text.split() 
+        
+        if len(text_parts) > 1:
+            count_heh = int(text_parts[1])
+        else:
+            count_heh = 5
+            
+        if count_heh > 100:
+            count_heh = 100
+            bot.reply_to(message, "Слишком many! Давай ограничимся сотней:")
+            
+        bot.reply_to(message, "he" * count_heh)
+        
+    except ValueError:
+        bot.reply_to(message, "Ошибка! После /heh нужно написать число. Пример: /heh 10")
+
+
+# Шаги диалога:
+
+@bot.message_handler(commands=['survey'])
+def start_survey(message):
+    msg = bot.send_message(message.chat.id, "Давай познакомимся! Как тебя зовут?", reply_markup=types.ReplyKeyboardRemove())
+    bot.register_next_step_handler(msg, get_name)
+
+def get_name(message):
+    global user_name
+    user_name = message.text 
+    
+    age_markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    age_markup.add("До 15 лет", "15-18 лет", "Больше 18")
+    
+    msg = bot.send_message(message.chat.id, f"Приятно познакомиться, {user_name}! Сколько тебе лет?", reply_markup=age_markup)
+    bot.register_next_step_handler(msg, get_age)
+
+def get_age(message):
+    global user_age
+    user_age = message.text 
+    
+    result_text = f"Проверка данных:\n👤 Имя: {user_name}\n🎂 Возраст: {user_age}\n\nПриятно было пообщаться!"
+    bot.send_message(message.chat.id, result_text, reply_markup=main_menu())
+
+
+# Обычный текстовый обработчик:
+@bot.message_handler(content_types=['text'])
+def handle_text(message):
+    # Переводим текст в нижний регистр, чтобы бот понимал и "Hi", и "hi", и "HI"
+    user_message = message.text.lower()
+
+    # Проверяем разные варианты приветствия
+    if user_message == "👋 привет" or user_message == "привет" or user_message == "hi":
+        send_welcome(message)
+    elif user_message == "👋 пока" or user_message == "пока":
+        send_bye(message)
+    elif user_message == "📝 опрос" or user_message == "опрос":
+        start_survey(message)
+    elif user_message == "❓ инфо" or user_message == "инфо":
+        bot.send_message(message.chat.id, "Я учебный бот. Вот ссылки на полезные материалы:", reply_markup=links_menu())
+    else:
+        bot.reply_to(message, f"Ты написал: '{message.text}'. Я пока не знаю такую команду, воспользуйся кнопками меню!")
+
+
+# Запуск бота в бесконечном цикле
+bot.infinity_polling()
